@@ -4,46 +4,30 @@ export async function onRequest(context) {
 
   const id = url.searchParams.get("id") || "unknown";
   const threadId = url.searchParams.get("thread") || "unknown";
-  const userAgent = request.headers.get("user-agent") || "";
+  const sentTimestamp = parseInt(url.searchParams.get("sent") || "0", 10);
+  const userAgent = request.headers.get("user-agent") || "unknown";
   const ip = request.headers.get("cf-connecting-ip") || "unknown";
 
-  // 🛡️ Block common bots and preloaders
-  const blockedAgents = [
-    "GoogleImageProxy",
-    "Googlebot",
-    "curl",
-    "wget",
-    "python-requests",
-    "Go-http-client",
-    "Java/",
-    "GmailProxy",
-    "fetch"
-  ];
+  const now = Date.now();
+  const timeSinceSent = now - sentTimestamp;
 
-  const isBot = blockedAgents.some(bot =>
-    userAgent.toLowerCase().includes(bot.toLowerCase())
-  );
+  // ⏳ Skip logging if pixel was loaded too early (e.g., within first 15s)
+  if (timeSinceSent < 15000) {
+    console.log(`⏸️ Pixel ignored (too early): ${id}, ${timeSinceSent}ms`);
+  } else {
+    // 🔗 Send to Apps Script
+    const logUrl = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+    const fullTrackUrl = `${logUrl}?id=${encodeURIComponent(id)}&thread=${encodeURIComponent(threadId)}&ip=${encodeURIComponent(ip)}&ua=${encodeURIComponent(userAgent)}`;
 
-  if (isBot) {
-    console.log(`🚫 Blocked bot/preloader: ${userAgent}`);
-    return new Response("Ignored bot", { status: 204 });
+    try {
+      await fetch(fullTrackUrl);
+      console.log(`✅ Tracked: ${id} after ${Math.round(timeSinceSent / 1000)}s`);
+    } catch (err) {
+      console.error("❌ Logging failed:", err);
+    }
   }
 
-  // ⏱️ Wait 20 seconds before logging (to avoid preloading hits)
-  await new Promise(resolve => setTimeout(resolve, 20000));
-
-  // 🔗 Send tracking data to Apps Script
-  const logUrl = "https://script.google.com/macros/s/AKfycbxynag-DhqvrnZ0n61NPCL2nzyMqVMIH7tZ6jyLC9Nt3P2JlY1nmh_zAwNBqks1OiaB/exec";
-  const fullTrackUrl = `${logUrl}?id=${encodeURIComponent(id)}&thread=${encodeURIComponent(threadId)}&ip=${encodeURIComponent(ip)}&ua=${encodeURIComponent(userAgent)}`;
-
-  try {
-    await fetch(fullTrackUrl);
-    console.log(`✅ Logged: ${id}, IP: ${ip}`);
-  } catch (err) {
-    console.error("❌ Logging error:", err);
-  }
-
-  // 🖼️ 1×1 transparent GIF
+  // 🖼️ Return transparent 1×1 GIF
   const gif = Uint8Array.from(
     atob("R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="),
     c => c.charCodeAt(0)
