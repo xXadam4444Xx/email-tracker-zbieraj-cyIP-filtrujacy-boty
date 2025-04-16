@@ -33,7 +33,7 @@ export async function onRequest(context) {
   await new Promise(resolve => setTimeout(resolve, 20000));
 
   // 🔗 Send tracking data to Apps Script
-  const logUrl = "https://script.google.com/macros/s/PASTE_YOUR_SCRIPT_DEPLOYMENT_URL_HERE/exec";
+  const logUrl = "https://script.google.com/macros/s/AKfycbxynag-DhqvrnZ0n61NPCL2nzyMqVMIH7tZ6jyLC9Nt3P2JlY1nmh_zAwNBqks1OiaB/exec";
   const fullTrackUrl = `${logUrl}?id=${encodeURIComponent(id)}&thread=${encodeURIComponent(threadId)}&ip=${encodeURIComponent(ip)}&ua=${encodeURIComponent(userAgent)}`;
 
   try {
